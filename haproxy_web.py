@@ -8,6 +8,7 @@ from yaml.loader import SafeLoader
 from pathlib import Path
 import subprocess
 import re
+import time
 
 
 # Constants
@@ -22,6 +23,7 @@ class Config(Enum):
     WORKER_443 = 443
     WORKER_30000 = 30000
     WORKER_30001 = 30001
+    MESSAGE_DELAY = 2
 
 
 # variables
@@ -59,18 +61,20 @@ REAL_LB_CONFIG = {
 def show_lb_cfg(filename):
     _file = Path(filename)
 
-    try:
-        if _file.exists:
-            with st.expander(f"HAProxy {_file.name} Config"):
-                st.text_area(
-                    _file.name,
-                    value=_file.read_text(encoding="utf-8"),
-                    height=300,
-                )
-            st.session_state.cfg_file = True
-    except FileNotFoundError:
-        st.error(f"{filename} is not Found..")
-        st.session_state.cfg_file = False
+    if not _file.exists():
+        alert = st.warning(
+            f"{filename} is not Found, try creating the Empty file..."
+        )
+        _file.write_text("")
+        time.sleep(Config.MESSAGE_DELAY.value)
+        alert.empty()
+
+    with st.expander(f"HAProxy {_file.name} Config"):
+        st.text_area(
+            _file.name,
+            value=_file.read_text(encoding="utf-8"),
+            height=300,
+        )
 
 
 def write_backend_cfg(filename, ports, how_many):
@@ -212,14 +216,13 @@ if __name__ == "__main__":
         # masters
         show_lb_cfg(TEST_LB_CONFIG["LB_CLUSTER"])
         show_lb_cfg(TEST_LB_CONFIG["LB_WORKER"])
-        if st.session_state.cfg_file is True:
-            show_ip_input(
-                TEST_LB_CONFIG["LB_CLUSTER"],
-                TEST_LB_CONFIG["LB_CLUSTER_PORTS"],
-                "master",
-            )
-            show_ip_input(
-                TEST_LB_CONFIG["LB_WORKER"],
-                TEST_LB_CONFIG["LB_WORKER_PORTS"],
-                "worker",
-            )
+        show_ip_input(
+            TEST_LB_CONFIG["LB_CLUSTER"],
+            TEST_LB_CONFIG["LB_CLUSTER_PORTS"],
+            "master",
+        )
+        show_ip_input(
+            TEST_LB_CONFIG["LB_WORKER"],
+            TEST_LB_CONFIG["LB_WORKER_PORTS"],
+            "worker",
+        )
